@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div id="app">
+    <h1>{{song}}</h1>
+    <p>《{{album.name}}》是{{singer}}2005年11月发行的专辑</p>
+    <p>主打歌为{{album.theme}}</p>
+    <p>作词人为{{singer}}等人。</p>
+    为你弹奏肖邦的{{album.theme}}
+</div>
+<script>
+
+    function Mvvm(options = {}) {
+        this.$options = options;
+        let data = this._data = this.$options.data;
+        for (let key in data) {
+            Object.defineProperty(this, key, {
+                configurable: true,
+                get() {
+                    return this._data[key];
+                },
+                set(newVal) {
+                    if (newVal === this.key) {
+                        return;
+                    }
+                    this._data[key] = newVal;
+                }
+            })
+        }
+        observe(data);
+
+        new Compile(options.el, this)
+
+    }
+
+
+    function Compile(el, vm) {
+        vm.$el = document.querySelector(el);
+        let fragment = document.createDocumentFragment();
+
+        while (child = vm.$el.firstChild) {
+            fragment.appendChild(child);
+        }
+        replace(fragment);
+
+
+        function replace(frag) {
+            Array.from(frag.childNodes).forEach(node => {
+                let reg = /\{\{(.*?)\}\}/g;
+                while (reg.test(node.textContent)) {
+                    let arr = RegExp.$1.split('.');
+                    let txt = node.textContent;
+                    let val = vm;
+                    arr.forEach(key => {
+                        val = val[key];
+                    })
+                    node.textContent = txt.replace(reg, val).trim();
+                    new Watcher(vm, RegExp.$1, newVal => {
+                        debugger
+                        node.textContent = txt.replace(reg, newVal).trim();
+                    })
+                }
+            })
+        }
+
+        vm.$el.appendChild(fragment);
+
+    }
+
+    function Dep() {
+        this.subs = [];
+    }
+
+    Dep.prototype = {
+        addSub: function (sub) {
+            this.subs.push(sub);
+        },
+        notify: function () {
+            this.subs.forEach(sub => sub.update());
+        }
+    }
+
+
+    function Watcher(vm, reg, fn) {
+        this.vm = vm;
+        this.reg = reg;
+        this.fn = fn;
+
+        let arr = reg.split('.');
+        let val = vm;
+        Dep.target = this;
+        arr.forEach(key => {
+            val = val[key];
+        });
+
+        Dep.target = null;
+    }
+
+    Watcher.prototype.update = function () {
+        let arr = this.reg.split('.');
+        let val = this.vm;
+        arr.forEach(key => {
+            val = val[key];
+        });
+        this.fn(val);
+    }
+
+    function observe(data) {
+        if (!data || typeof data !== 'object') {
+            return;
+        }
+        new Observe(data);
+
+        function Observe(data) {
+            for (let key in data) {
+                let val = data[key];
+                let dep = new Dep();
+                observe(val);
+                Object.defineProperty(data, key, {
+                    configurable: true,
+                    get() {
+                        Dep.target && dep.addSub(Dep.target);
+                        return val;
+                    },
+                    set(newVal) {
+                        if (newVal === val) {
+                            return;
+                        }
+                        val = newVal;
+                        dep.notify();
+                        observe(newVal);
+                    }
+                })
+            }
+        }
+    }
+
+    let myMvvm = new Mvvm({
+        el: '#app',
+        data: {
+            song: '发如雪',
+            album: {
+                name: '十一月的萧邦',
+                theme: '夜曲'
+            },
+            singer: '周杰伦'
+        }
+    });
+</script>
+</body>
+</html>
