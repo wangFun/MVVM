@@ -50,7 +50,7 @@
 
         function replace(frag) {
             Array.from(frag.childNodes).forEach(node => {
-                let reg = /\{\{(.*?)\}\}/g;
+                let reg = /\{\{(.*?)\}\}/;
                 while (reg.test(node.textContent)) {
                     let arr = RegExp.$1.split('.');
                     let txt = node.textContent;
@@ -58,9 +58,8 @@
                     arr.forEach(key => {
                         val = val[key];
                     })
-                    node.textContent = txt.replace(reg, val).trim();
+                    node.textContent = node.textContent.replace(reg, val).trim();
                     new Watcher(vm, RegExp.$1, newVal => {
-                        debugger
                         node.textContent = txt.replace(reg, newVal).trim();
                     })
                 }
